@@ -113,6 +113,7 @@ igl_folder_targets("Tutorials"
     716_HeatGeodesics_bin
     718_IterativeClosestPoint_bin
     719_ExplodedView_bin
+    720_OptimalTransportInterpolation
 )
 
 endfunction()
