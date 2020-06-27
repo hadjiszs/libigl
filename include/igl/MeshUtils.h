@@ -412,8 +412,6 @@ struct MCWrapper { // marching cube wrapper
                && "empty");
     }
 
-    //const FaceVec&     get_in_f() const { return _insf._inmesh._f; }
-    //const VertexVec&   get_in_v() const { return _insf._inmesh._v; }
     const FaceVec&     get_out_f() const { return _out._f; }
     const VertexVec&   get_out_v() const { return _out._v; }
     const SFWeightVec& get_in_sfvalues() const { return _insf._values; }

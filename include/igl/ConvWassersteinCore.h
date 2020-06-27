@@ -14,8 +14,8 @@
 
 using Eigen::VectorXd;
 
-// in order to bypass --std=c++1z, when olm will use c++17,
-// just replace utils by std
+// in order to bypass --std=c++1z
+// with C++17 just replace utils by std
 namespace utils
 {
     template<typename T>
@@ -422,97 +422,6 @@ struct WeightProvider {
         }
     }
 
-    // overlap the shapes with the keyshapes during all the sequence
-    // add a ratio_in_key in order to give weights between shapes and keyshapes
-    //
-    // ratio_in_key in [0...1]
-    // -> 0 : close to the input shapes
-    // -> 1 : close to the keyframes
-    // ex:
-    // -->--->--->-interpolation time-->--->-->-->---->-->-->--> t
-    // shape 1(eg. pikachu)...................................
-    //                              ^
-    //                              | ratio_in_key
-    //                              v
-    // keyshapes (moving bubble 3d)...........................
-    // bubble1 bubble2 ..... bubbleN
-    void compute_byratio(float ratio_in_key = 0.1f)
-    {
-        const utils::interval f01{ 0., 1. };
-        const utils::interval stepwin{ 0., float(nbstep - 1.f) };
-        const utils::interval shapewin{ float(NBSHAPE), float(nbshapes - 1.f) };
-
-        // values windows
-        for (int istep = 0; istep < nbstep; ++istep) {
-            const float step_0_1 = utils::mapval(stepwin, f01, istep);
-            const int selected_shape = std::floor(utils::mapval(stepwin, shapewin, istep));
-            for (int ishape = NBSHAPE; ishape < nbshapes; ++ishape)
-                mat_poids[istep](ishape) = 0.f;
-            mat_poids[istep](selected_shape) = ratio_in_key;
-        }
-
-        // special case for input shapes which are not keyframes
-        for (int istep = 0; istep < nbstep; ++istep) {
-            const float step_0_1 = utils::mapval(stepwin, f01, istep);
-            for (int ishape = 0; ishape < NBSHAPE; ++ishape) {
-                const float shape_0_1 = utils::mapval({ 0., float(NBSHAPE - 1) }, f01, ishape);
-                mat_poids[istep](ishape) = std::abs(shape_0_1 - step_0_1);
-                mat_poids[istep](ishape) *= 1. - ratio_in_key;
-            }
-        }
-
-        normalize();
-    }
-
-    void compute_byqueue()
-    {
-        const int deltatransition = 3; // amount of step to pass from src to first 2d frame
-        assert(deltatransition > 1 && "transition cannot be empty");
-
-        const utils::interval f01{ 0., 1. };
-        const utils::interval stepwin{ deltatransition, float(nbstep - deltatransition) };
-        const utils::interval shapewin{ 3, float(nbshapes - 2) };
-
-        std::vector<double> increaseSeq(deltatransition);
-        std::vector<double> decreaseSeq(deltatransition);
-
-        // fill the transition values
-        for (int i = 0; i < deltatransition; ++i) {
-            increaseSeq[i] = double(i) / double(deltatransition-1);
-            decreaseSeq[i] = 1. - increaseSeq[i];
-        }
-
-        const int firstKeyShapeIdx = NBSHAPE;
-        const int lastKeyShapeIdx = this->nbshapes-1;
-
-        // interpolate source and 1st keyshape
-        for (int istep = 0; istep < deltatransition; ++istep) {
-            mat_poids[istep](0) = decreaseSeq[istep]; // decrease source
-            mat_poids[istep](firstKeyShapeIdx) = increaseSeq[istep]; // increase 1st keyshape
-        }
-
-        // interpolate last keyshape with the destination mesh
-        for (int istep = nbstep-deltatransition, i=0; istep < nbstep; ++istep, ++i) {
-            mat_poids[istep](lastKeyShapeIdx) = decreaseSeq[i]; // descrease last keyshape
-            mat_poids[istep](1) = increaseSeq[i]; // increase destination
-        }
-
-        // middle of the interpolation (2d animation transition)
-        for (int istep = stepwin.l; istep <= stepwin.u; ++istep)
-        {
-            const float step_0_1 = utils::mapval(stepwin, f01, istep);
-            const int selected_shape = std::floor(utils::mapval(stepwin, shapewin, istep));
-            for (int ishape = shapewin.l; ishape <= shapewin.u; ++ishape)
-            {
-                auto distt = std::floor(std::abs(ishape - selected_shape));
-                mat_poids[istep](ishape) = distt <= deltatransition ? std::abs(deltatransition+1-distt) : 0.;
-            }
-            mat_poids[istep](firstKeyShapeIdx + 1) = 0.1;
-        }
-
-        normalize();
-    }
-
     //void compute_bybernstein() {
     //VectorXd poids = VectorXd::Constant(sf.size(), 1.);
     //const double bu = 1.0 - ct;
@@ -525,9 +434,6 @@ struct WeightProvider {
     //poids[0] = bernstein<NBSHAPE - 1, 0>(ct);//1.-bu-bv;
     //poids[1] = bernstein<NBSHAPE - 1, 1>(ct);//bu;
     //poids[2] = bernstein<NBSHAPE - 1, 2>(ct);//bv;
-    //}
-
-    //void compute_byuser() {
     //}
 };
 

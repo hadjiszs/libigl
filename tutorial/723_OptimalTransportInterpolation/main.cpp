@@ -33,6 +33,7 @@ int main(int argc, char** argv)
         1, 5,
         2, 6,
         7, 3;
+
     // Find the bounding box
     const auto getvbox_w = [&](auto vmin, auto vmax) {
         auto& m = vmin;
